@@ -1,4 +1,7 @@
+import logging
 import torch
+
+logger = logging.getLogger(__name__)
 
 
 def train_epoch(model, optimizer, criterion, train_loader, device):
@@ -39,7 +42,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, num_epochs):
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
 
-        print(
+        logger.info(
             f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}"
         )
 
