@@ -11,6 +11,7 @@ def grid_search(model_class, train_loader, val_loader, param_grid, num_epochs):
 
     best_val_loss = float("inf")
     best_params = None
+    histories = {}  # Dictionary to store history for each parameter combination
 
     for index, params in enumerate(param_grid, start=1):
         logger.info(f"Testing combination {index}/{len(param_grid)}: {params}")
@@ -43,8 +44,11 @@ def grid_search(model_class, train_loader, val_loader, param_grid, num_epochs):
             best_val_loss = final_val_loss
             best_params = params
 
+        # Store the history for the current parameter combination
+        histories[tuple(params.items())] = history
+
     logger.info("Hyperparameter grid search completed")
-    return best_params, best_val_loss
+    return best_params, best_val_loss, histories
 
 
 def generate_param_grid(param_options):

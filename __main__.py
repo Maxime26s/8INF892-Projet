@@ -45,6 +45,7 @@ from src.data_loader import load_data
 from src.hyperparameter_tuning import grid_search, generate_param_grid
 from src.gcn_model import GCN
 from src.train import train
+from src.visualizer import visualize_history, visualize_all_histories
 
 
 def set_seed(seed=42):
@@ -73,7 +74,7 @@ if torch.cuda.is_available():
     logging.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
 else:
     device = torch.device("cpu")
-    logging.info("CUDA is not available. Using CPU instead.")
+    logging.info("CUDA is not available, using CPU instead")
 
 
 def training():
@@ -92,7 +93,11 @@ def training():
     criterion = F.mse_loss
 
     # Train the model
-    train(model, train_loader, val_loader, optimizer, criterion, num_epochs=20)
+    history = train(
+        model, train_loader, val_loader, optimizer, criterion, num_epochs=20
+    )
+
+    visualize_history(history, filename="training_history.png")
 
     logger.info("Training completed")
 
@@ -109,19 +114,19 @@ def hyperparameter_tuning():
     }
 
     param_grid = generate_param_grid(param_options)
-    best_params, best_val_loss = grid_search(
+    best_params, best_val_loss, histories = grid_search(
         GCN, train_loader, val_loader, param_grid, num_epochs=20
     )
 
     logger.info(f"Best Hyperparameters: {best_params}")
     logger.info(f"Best Validation Loss: {best_val_loss}")
 
+    visualize_all_histories(histories)
+
     logger.info("Hyperparameter tuning completed")
 
 
 if __name__ == "__main__":
-    logger.info("Application started")
-
     set_seed(42)
 
     parser = argparse.ArgumentParser(
