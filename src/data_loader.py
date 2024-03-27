@@ -23,7 +23,7 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
         for data in tqdm(
             dataset,
             desc="Sanity Check: No directed graphs",
-            unit="graph",
+            unit="node",
             ncols=100,
         )
     ):
@@ -35,7 +35,7 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
     all_targets = torch.stack(
         [
             data.y
-            for data in tqdm(dataset, desc="Stacking Targets", unit="graph", ncols=100)
+            for data in tqdm(dataset, desc="Stacking Targets", unit="node", ncols=100)
         ],
         dim=0,
     )
@@ -50,7 +50,7 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
         )
 
     # Standardize the targets
-    for data in tqdm(dataset, desc="Standardizing Targets", unit="graph", ncols=100):
+    for data in tqdm(dataset, desc="Standardizing Targets", unit="node", ncols=100):
         data.y = (data.y - target_means) / target_stds
 
     if not all(
@@ -58,7 +58,7 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
         for data in tqdm(
             dataset,
             desc="Sanity Check: Non-finite Values",
-            unit="graph",
+            unit="node",
             ncols=100,
         )
     ):
@@ -69,7 +69,7 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
         [
             data.x
             for data in tqdm(
-                dataset, desc="Concatenating Features", unit="graph", ncols=100
+                dataset, desc="Concatenating Features", unit="node", ncols=100
             )
         ],
         dim=0,
@@ -78,7 +78,7 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
     feature_stds = torch.std(concatenated_features, dim=0)
 
     # Standardize node features
-    for data in tqdm(dataset, desc="Standardizing Features", unit="graph", ncols=100):
+    for data in tqdm(dataset, desc="Standardizing Features", unit="node", ncols=100):
         data.x = (data.x - feature_means) / feature_stds
 
     if not all(
@@ -86,14 +86,14 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
         for data in tqdm(
             dataset,
             desc="Sanity Check: Non-finite Values",
-            unit="graph",
+            unit="node",
             ncols=100,
         )
     ):
         raise ValueError("Non-finite values found in standardized features.")
 
     # Replace NaNs and Infs (post-standardization)
-    for data in tqdm(dataset, desc="Handling Missing Data", unit="graph", ncols=100):
+    for data in tqdm(dataset, desc="Handling Missing Data", unit="node", ncols=100):
         data.x = torch.nan_to_num(data.x, nan=0.0)
         data.y = torch.nan_to_num(data.y, nan=0.0)
 
