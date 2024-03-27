@@ -9,15 +9,12 @@ import os
 
 
 def setup_logging():
-    # Get current time for the log file name
     current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_filename = f"training_{current_time}.log"
 
-    # Set the root logger's level
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    # Create a console handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter(
@@ -25,7 +22,6 @@ def setup_logging():
     )
     console_handler.setFormatter(console_formatter)
 
-    # Create a file handler with a timestamped log file
     file_handler = logging.FileHandler(log_filename)
     file_handler.setLevel(logging.INFO)
     file_formatter = logging.Formatter(
@@ -33,7 +29,6 @@ def setup_logging():
     )
     file_handler.setFormatter(file_formatter)
 
-    # Add both handlers to the logger
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
@@ -80,7 +75,7 @@ else:
 def training():
     logger.info("Starting training")
 
-    train_loader, val_loader, _ = load_data(batch_size=64)  # Define your data loader
+    train_loader, val_loader, _ = load_data(batch_size=64)
     model = GCN(
         num_features=train_loader.dataset.num_features,
         num_labels=train_loader.dataset.num_classes,
@@ -105,7 +100,7 @@ def training():
 def hyperparameter_tuning():
     logger.info("Starting hyperparameter tuning")
 
-    train_loader, val_loader, _ = load_data(batch_size=64)  # Define your data loader
+    train_loader, val_loader, _ = load_data(batch_size=64)
     param_options = {
         "hidden_channels": [16, 32, 64],
         "num_layers": [2, 3, 4],

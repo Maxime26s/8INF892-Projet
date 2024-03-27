@@ -44,15 +44,7 @@ def load_data(batch_size=32, train_prop=0.7, val_prop=0.2, test_prop=0.1):
     target_means = all_targets.mean(dim=0)
     target_stds = all_targets.std(dim=0)
 
-    if not all(
-        target_std == 0
-        for target_std in tqdm(
-            target_stds,
-            desc="Sanity Check: Zero Standard Deviation",
-            unit="target",
-            ncols=100,
-        )
-    ):
+    if torch.any(target_stds == 0):
         raise ValueError(
             "Standard deviation of a target is zero, which will lead to division by zero during standardization."
         )
