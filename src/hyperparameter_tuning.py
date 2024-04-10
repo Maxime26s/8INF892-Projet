@@ -27,7 +27,7 @@ def grid_search(model_class, train_loader, val_loader, param_grid, num_epochs):
             **model_params,
         )
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        criterion = torch.nn.MSELoss()
+        criterion = torch.nn.CrossEntropyLoss()
 
         # Train the model with the current hyperparameter configuration
         history = train(

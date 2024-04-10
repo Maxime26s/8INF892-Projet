@@ -85,11 +85,11 @@ def training():
     )
     logger.info(f"Model initialized: {model}")
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    criterion = F.mse_loss
+    criterion = torch.nn.CrossEntropyLoss()
 
     # Train the model
     history = train(
-        model, train_loader, val_loader, optimizer, criterion, num_epochs=20
+        model, train_loader, val_loader, optimizer, criterion, num_epochs=300
     )
 
     visualize_history(history, filename="training_history.png")
@@ -110,7 +110,7 @@ def hyperparameter_tuning():
 
     param_grid = generate_param_grid(param_options)
     best_params, best_val_loss, histories = grid_search(
-        GCN, train_loader, val_loader, param_grid, num_epochs=20
+        GCN, train_loader, val_loader, param_grid, num_epochs=300
     )
 
     logger.info(f"Best Hyperparameters: {best_params}")
