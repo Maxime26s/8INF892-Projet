@@ -1,11 +1,11 @@
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GraphSAGE, SAGEConv, global_mean_pool
+from torch_geometric.nn import SAGEConv, global_mean_pool
 
 
-class GraphSAGEModel(torch.nn.Module):
+class GraphSAGE(torch.nn.Module):
     def __init__(self, in_channels, out_channels, hidden_channels, num_layers, dropout):
-        super(GraphSAGEModel, self).__init__()
+        super(GraphSAGE, self).__init__()
 
         self.dropout = dropout
 

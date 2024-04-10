@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 from src.data_loader import load_data
 from src.hyperparameter_tuning import grid_search, generate_param_grid
 from src.gcn_model import GCN
+from src.gat_model import GAT
+from src.gsage_model import GraphSAGE
 from src.train import train
 from src.visualizer import visualize_history, visualize_all_histories
 
@@ -77,7 +79,7 @@ def training():
     logger.info("Starting training")
 
     train_loader, val_loader, _ = load_data(batch_size=64)
-    model = GCN(
+    model = GraphSAGE(
         in_channels=train_loader.dataset.num_features,
         out_channels=train_loader.dataset.num_classes,
         hidden_channels=64,

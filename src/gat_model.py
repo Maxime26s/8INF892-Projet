@@ -3,11 +3,11 @@ import torch.nn.functional as F
 from torch_geometric.nn import GATConv, global_mean_pool
 
 
-class GATModel(torch.nn.Module):
+class GAT(torch.nn.Module):
     def __init__(
         self, in_channels, out_channels, hidden_channels, num_layers, dropout, heads=1
     ):
-        super(GATModel, self).__init__()
+        super(GAT, self).__init__()
 
         self.dropout = dropout
 
