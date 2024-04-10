@@ -1,4 +1,5 @@
 import logging
+from ogb.graphproppred import PygGraphPropPredDataset
 import torch
 from torch_geometric.data import Dataset, Data
 from torch_geometric.datasets import QM9, TUDataset
@@ -13,17 +14,11 @@ def load_data(
     batch_size=32,
     train_prop=0.7,
     val_prop=0.2,
-    max_graph_count=None,
 ):
     transform = Compose([Distance(norm=False, max_value=None)])
 
     # Load the dataset
-    dataset = TUDataset(root="/tmp/ENZYMES", name="ENZYMES")
-
-    # Select a subset of the first 5000 compounds
-    if max_graph_count is not None:
-        subset_size = min(max_graph_count, len(dataset))
-        dataset = dataset[:subset_size]
+    dataset = PygGraphPropPredDataset(root="/tmp/ogbg-molhiv", name="ogbg-molhiv")
 
     dataset = dataset.shuffle()
 
@@ -55,6 +50,7 @@ def load_data(
 
 
 def print_info(dataset, name):
+    return
     logger.info(f"{name} - Dataset type: {type(dataset)}")
     logger.info(f"{name} - Number of graphs: {len(dataset)}")
     logger.info(f"{name} - Number of features: {dataset.num_features}")

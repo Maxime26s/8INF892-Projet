@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 import logging
+from sklearn.utils.class_weight import compute_class_weight
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -77,15 +78,22 @@ def training():
 
     train_loader, val_loader, _ = load_data(batch_size=64)
     model = GCN(
-        num_features=train_loader.dataset.num_features,
-        num_labels=train_loader.dataset.num_classes,
+        in_channels=train_loader.dataset.num_features,
+        out_channels=train_loader.dataset.num_classes,
         hidden_channels=64,
         num_layers=2,
         dropout=0.5,
     )
     logger.info(f"Model initialized: {model}")
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    criterion = torch.nn.CrossEntropyLoss()
+
+    labels = [data.y.item() for data in train_loader.dataset]
+    class_weights = compute_class_weight(
+        "balanced", classes=np.unique(labels), y=labels
+    )
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float).to(device)
+    print(f"Class weights: {class_weights}")
+    criterion = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
 
     # Train the model
     history = train(

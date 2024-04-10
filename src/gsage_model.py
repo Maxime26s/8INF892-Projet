@@ -1,24 +1,19 @@
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, global_mean_pool
+from torch_geometric.nn import GraphSAGE, SAGEConv, global_mean_pool
 
 
-class GCN(torch.nn.Module):
+class GraphSAGEModel(torch.nn.Module):
     def __init__(self, in_channels, out_channels, hidden_channels, num_layers, dropout):
-        super(GCN, self).__init__()
+        super(GraphSAGEModel, self).__init__()
 
         self.dropout = dropout
 
         self.convs = torch.nn.ModuleList()
-
-        self.convs.append(GCNConv(in_channels, hidden_channels))
-
+        self.convs.append(SAGEConv(in_channels, hidden_channels))
         for _ in range(num_layers - 2):
-            self.convs.append(GCNConv(hidden_channels, hidden_channels))
-
-        self.convs.append(GCNConv(hidden_channels, out_channels))
-
-        self.dropout = dropout
+            self.convs.append(SAGEConv(hidden_channels, hidden_channels))
+        self.convs.append(SAGEConv(hidden_channels, out_channels))
 
     def forward(self, x, edge_index, batch):
         x = x.to(torch.float)
