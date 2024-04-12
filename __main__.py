@@ -1,9 +1,7 @@
 import argparse
 from datetime import datetime
 import logging
-from sklearn.utils.class_weight import compute_class_weight
 import torch
-import torch.nn.functional as F
 import numpy as np
 import random
 import os
@@ -43,7 +41,7 @@ from src.gcn_model import GCN
 from src.gat_model import GAT
 from src.gsage_model import GraphSAGE
 from src.train import train
-from src.visualizer import visualize_history, visualize_all_histories
+from src.visualizer import visualize_history
 
 
 def set_seed(seed=42):
@@ -78,31 +76,33 @@ else:
 def training():
     logger.info("Starting training")
 
-    train_loader, val_loader, _ = load_data(batch_size=64)
-    model = GraphSAGE(
+    train_loader, val_loader, _ = load_data(batch_size=32)
+    model = GCN(
         in_channels=train_loader.dataset.num_features,
-        out_channels=train_loader.dataset.num_classes,
-        hidden_channels=64,
-        num_layers=2,
+        out_channels=train_loader.dataset.num_tasks,
+        hidden_channels=32,
+        num_layers=5,
         dropout=0.5,
     )
     logger.info(f"Model initialized: {model}")
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    labels = [data.y.item() for data in train_loader.dataset]
-    class_weights = compute_class_weight(
-        "balanced", classes=np.unique(labels), y=labels
-    )
-    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float).to(device)
-    print(f"Class weights: {class_weights}")
-    criterion = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
+    criterion = torch.nn.BCEWithLogitsLoss()
 
     # Train the model
     history = train(
-        model, train_loader, val_loader, optimizer, criterion, num_epochs=300
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        optimizer=optimizer,
+        criterion=criterion,
+        num_epochs=300,
+        patience=25,
     )
 
-    visualize_history(history, filename="training_history.png")
+    visualize_history(history, "loss", f"Training and Validation", f"history_loss.png")
+    visualize_history(history, "acc", f"Training and Validation", f"history_acc.png")
+    visualize_history(history, "roc_auc", f"Validation", f"history_roc-auc.png")
 
     logger.info("Training completed")
 
@@ -110,23 +110,51 @@ def training():
 def hyperparameter_tuning():
     logger.info("Starting hyperparameter tuning")
 
-    train_loader, val_loader, _ = load_data(batch_size=64)
+    model_class = GAT
+
+    train_loader, val_loader, _ = load_data(batch_size=32)
     param_options = {
-        "hidden_channels": [16, 32, 64],
-        "num_layers": [2, 3, 4],
-        "dropout": [0.1, 0.25, 0.5],
-        "lr": [0.01, 0.001, 0.0001],
+        "hidden_channels": [64, 256],
+        "num_layers": [3, 5],
+        "dropout": [0.2, 0.5],
+        "lr": [0.001, 0.0001],
     }
 
+    if model_class == GAT:
+        param_options["heads"] = [2, 6]
+        param_options["concat"] = [True, False]
+
     param_grid = generate_param_grid(param_options)
-    best_params, best_val_loss, histories = grid_search(
-        GCN, train_loader, val_loader, param_grid, num_epochs=300
+    _, _, results = grid_search(
+        model_class, train_loader, val_loader, param_grid, num_epochs=100, patience=15
     )
 
-    logger.info(f"Best Hyperparameters: {best_params}")
-    logger.info(f"Best Validation Loss: {best_val_loss}")
+    # Sort results by max ROC-AUC
+    sorted_results = sorted(
+        results, key=lambda result: result["max_roc_auc"], reverse=True
+    )
 
-    visualize_all_histories(histories)
+    # Print top 5 parameter sets
+    logger.info("Top 5 Hyperparameter Sets by ROC-AUC:")
+    for i, result in enumerate(sorted_results[:5]):
+        logger.info(
+            f"Rank {i+1}: ROC-AUC: {result['max_roc_auc']:.4f}, Parameters: {result['params']}"
+        )
+
+    # Visualize histories for all parameter sets
+    for index, result in enumerate(sorted_results, start=1):
+        history = result["history"]
+        params = result["params"]
+
+        visualize_history(
+            history, "loss", f"Params: {params}", f"history_loss_{index}.png"
+        )
+        visualize_history(
+            history, "acc", f"Params: {params}", f"history_acc_{index}.png"
+        )
+        visualize_history(
+            history, "roc_auc", f"Params: {params}", f"history_roc-auc_{index}.png"
+        )
 
     logger.info("Hyperparameter tuning completed")
 

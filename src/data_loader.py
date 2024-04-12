@@ -19,7 +19,7 @@ def load_data(
 
     # Load the dataset
     dataset = PygGraphPropPredDataset(root="/tmp/ogbg-molhiv", name="ogbg-molhiv")
-
+    print(dataset.num_tasks)
     dataset = dataset.shuffle()
 
     # Print information about the dataset
@@ -63,4 +63,4 @@ def print_info(dataset, name):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    train_loader, val_loader, test_loader = load_data(max_graph_count=None)
+    train_loader, val_loader, test_loader = load_data()

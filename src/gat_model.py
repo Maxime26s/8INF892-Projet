@@ -5,11 +5,21 @@ from torch_geometric.nn import GATConv, global_mean_pool
 
 class GAT(torch.nn.Module):
     def __init__(
-        self, in_channels, out_channels, hidden_channels, num_layers, dropout, heads=1
+        self,
+        in_channels,
+        out_channels,
+        hidden_channels=32,
+        num_layers=2,
+        dropout=0.2,
+        heads=1,
+        concat=False,
     ):
         super(GAT, self).__init__()
 
         self.dropout = dropout
+
+        if num_layers < 2:
+            raise ValueError("Number of GNN layers must be greater than 1.")
 
         self.convs = torch.nn.ModuleList()
         self.convs.append(
@@ -29,7 +39,7 @@ class GAT(torch.nn.Module):
                 hidden_channels * heads,
                 out_channels,
                 heads=1,
-                concat=False,
+                concat=concat,
                 dropout=dropout,
             )
         )

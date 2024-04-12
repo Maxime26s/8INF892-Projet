@@ -1,15 +1,31 @@
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
 
-def visualize_history(history, title="Training and Validation Loss", filename=None):
+def visualize_history(history, metric, title="Training and Validation", filename=None):
     plt.figure(figsize=(10, 6))
-    plt.plot(history["train_loss"], label="Train Loss")
-    plt.plot(history["val_loss"], label="Validation Loss")
-    plt.title(title)
+
+    if metric != "roc_auc":
+        train_metric = f"train_{metric}"
+        val_metric = f"val_{metric}"
+
+        train_values = to_numpy(history[train_metric])
+        val_values = to_numpy(history[val_metric])
+
+        plt.plot(train_values, label=f"Train {metric.capitalize()}")
+        plt.plot(val_values, label=f"Validation {metric.capitalize()}")
+    else:
+        values = to_numpy(history[metric])
+
+        plt.plot(values, label=f"{metric.capitalize()}")
+
+    plt.title(f"{title} - {metric.capitalize()}")
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel(metric.capitalize())
     plt.legend()
     plt.grid(True)
+
     if filename:
         plt.savefig(filename)
         plt.close()
@@ -17,8 +33,8 @@ def visualize_history(history, title="Training and Validation Loss", filename=No
         plt.show()
 
 
-def visualize_all_histories(histories):
-    for index, (params, history) in enumerate(histories.items(), start=1):
-        title = f"Params: {dict(params)}"
-        filename = f"history_plot_{index}.png"
-        visualize_history(history, title, filename)
+def to_numpy(data):
+    if torch.is_tensor(data[0]):  # Check if the first element is a tensor
+        return np.array([d.cpu().numpy() for d in data])  # Convert each tensor to numpy
+    else:
+        return np.array(data)  # If it's already a numpy array or a list, use it as is

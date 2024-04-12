@@ -13,29 +13,29 @@ def train_epoch(model, optimizer, criterion, train_loader, device):
     correct = 0
     total = 0
 
-    for data in tqdm(
+    for batch in tqdm(
         train_loader,
         desc="Training",
         leave=False,
         unit="batch",
         ncols=100,
     ):
-        data = data.to(device)
+        batch = batch.to(device)
+
+        out = model(batch.x, batch.edge_index, batch.batch)
         optimizer.zero_grad()
 
-        out = model(data.x, data.edge_index, data.batch)
-
-        target = data.y.squeeze(1)
-
-        loss = criterion(out, target)
+        loss = criterion(out.to(torch.float32), batch.y.to(torch.float32))
         total_loss += loss.item()
 
         loss.backward()
         optimizer.step()
 
-        _, predicted = torch.max(out, 1)
-        total += target.size(0)
-        correct += (predicted == target).sum().item()
+        probs = torch.sigmoid(out).squeeze()
+        predicted = (probs > 0.5).long()
+
+        total += batch.y.size(0)
+        correct += (predicted == batch.y.squeeze(1)).sum()
 
     avg_loss = total_loss / total
     accuracy = 100 * correct / total
@@ -53,86 +53,83 @@ def evaluate(model, criterion, data_loader, device):
     all_targets = []
 
     with torch.no_grad():
-        for data in tqdm(
+        for batch in tqdm(
             data_loader,
             desc="Evaluating",
             leave=False,
             unit="batch",
             ncols=100,
         ):
-            data = data.to(device)
-            out = model(data.x, data.edge_index, data.batch)
+            batch = batch.to(device)
 
-            target = data.y.squeeze(1)
+            out = model(batch.x, batch.edge_index, batch.batch)
 
-            loss = criterion(out, target)
+            loss = criterion(out, batch.y.to(torch.float32))
             total_loss += loss.item()
 
-            _, predicted = torch.max(out, 1)
-            total += target.size(0)
-            correct += (predicted == target).sum().item()
+            probs = torch.sigmoid(out).squeeze()
+            predicted = (probs > 0.5).long()
 
-            probs = torch.sigmoid(
-                out[:, 1]
-            )  # Assuming out[:, 1] is the output for class 1
-            all_probs.extend(probs.cpu().numpy())
-            all_preds.extend(predicted.cpu().numpy())
-            all_targets.extend(target.cpu().numpy())
+            total += batch.y.size(0)
+            correct += (predicted == batch.y.squeeze(1)).sum()
 
-    # Compute confusion matrix
-    conf_matrix = confusion_matrix(all_targets, all_preds)
-    logger.info("Confusion Matrix:\n" + np.array2string(conf_matrix))
-
-    roc_auc = roc_auc_score(all_targets, all_probs)
-    logger.info(f"ROC-AUC Score: {roc_auc:.4f}")
-
-    # Print confusion matrix
-
-    # Calculate and print class distribution
-    class_distribution = np.bincount(all_targets)
-    class_distribution_str = ", ".join(
-        f"Class {i}: {n}" for i, n in enumerate(class_distribution)
-    )
-    logger.info("Class Distribution: " + class_distribution_str)
+            all_probs.extend(probs.cpu().numpy().flatten().tolist())
+            all_preds.extend(predicted.cpu().numpy().flatten().tolist())
+            all_targets.extend(batch.y.cpu().numpy().flatten().tolist())
 
     avg_loss = total_loss / total
-    accuracy = 100 * correct / total
-    return avg_loss, accuracy
+    accuracy = correct / total * 100
+    roc_auc = roc_auc_score(all_targets, all_probs)
+
+    return avg_loss, accuracy, roc_auc
 
 
 def train(
-    model, train_loader, val_loader, optimizer, criterion, num_epochs, patience=10
+    model, train_loader, val_loader, optimizer, criterion, num_epochs, patience=None
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
-    best_val_loss = float("inf")
+    history = {
+        "train_loss": [],
+        "val_loss": [],
+        "train_acc": [],
+        "val_acc": [],
+        "roc_auc": [],
+        "max_roc_auc": 0,
+    }
+    best_roc_auc = 0
+    best_epoch = 0
     patience_counter = 0
 
     for epoch in range(1, num_epochs + 1):
         train_loss, train_acc = train_epoch(
             model, optimizer, criterion, train_loader, device
         )
-        val_loss, val_acc = evaluate(model, criterion, val_loader, device)
+        val_loss, val_acc, roc_auc = evaluate(model, criterion, val_loader, device)
 
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
         history["train_acc"].append(train_acc)
         history["val_acc"].append(val_acc)
+        history["roc_auc"].append(roc_auc)
 
         logger.info(
-            f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Train Accuracy: {train_acc:.2f}%, Val Loss: {val_loss:.4f}, Val Accuracy: {val_acc:.2f}%"
+            f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Train Accuracy: {train_acc:.2f}%, Val Loss: {val_loss:.4f}, Val Accuracy: {val_acc:.2f}%, ROC-AUC: {roc_auc:.4f}"
         )
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        if roc_auc > best_roc_auc:
+            best_roc_auc = roc_auc
+            best_epoch = epoch
             patience_counter = 0
-        else:
+        elif patience is not None:
             patience_counter += 1
 
             if patience_counter >= patience:
                 logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
+
+    logger.info(f"Best ROC-AUC: {best_roc_auc:.4f} at epoch {best_epoch}")
+    history["max_roc_auc"] = best_roc_auc
 
     return history

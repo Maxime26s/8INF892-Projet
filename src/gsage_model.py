@@ -4,10 +4,15 @@ from torch_geometric.nn import SAGEConv, global_mean_pool
 
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, hidden_channels, num_layers, dropout):
+    def __init__(
+        self, in_channels, out_channels, hidden_channels=32, num_layers=2, dropout=0.2
+    ):
         super(GraphSAGE, self).__init__()
 
         self.dropout = dropout
+
+        if num_layers < 2:
+            raise ValueError("Number of GNN layers must be greater than 1.")
 
         self.convs = torch.nn.ModuleList()
         self.convs.append(SAGEConv(in_channels, hidden_channels))
