@@ -78,6 +78,7 @@ def training(model_type="gcn"):
 
     train_loader, val_loader, _ = load_data(batch_size=32)
 
+    # Initialize the model and optimizer
     if model_type == "gcn":
         model = GCN(
             in_channels=train_loader.dataset.num_features,
@@ -117,6 +118,7 @@ def training(model_type="gcn"):
 
     criterion = torch.nn.BCEWithLogitsLoss()
 
+    # Train the model
     history = train(
         model=model,
         train_loader=train_loader,
@@ -127,6 +129,7 @@ def training(model_type="gcn"):
         patience=None,
     )
 
+    # Visualize the training history
     visualize_history(history, "loss", f"Training and Validation", f"history_loss.png")
     visualize_history(history, "acc", f"Training and Validation", f"history_acc.png")
     visualize_history(history, "roc_auc", f"Validation", f"history_roc-auc.png")
@@ -151,6 +154,7 @@ def hyperparameter_tuning(model_type="gcn"):
 
     train_loader, val_loader, _ = load_data(batch_size=32)
 
+    # Define the hyperparameter grid for the model
     if model_class == GAT:
         param_options = {
             "hidden_channels": [64, 256],
@@ -168,21 +172,25 @@ def hyperparameter_tuning(model_type="gcn"):
             "lr": [0.001, 0.0001],
         }
 
+    # Generate a grid of hyperparameters
     param_grid = generate_param_grid(param_options)
     _, _, results = grid_search(
         model_class, train_loader, val_loader, param_grid, num_epochs=100, patience=15
     )
 
+    # Sort the results by the maximum ROC-AUC
     sorted_results = sorted(
         results, key=lambda result: result["max_roc_auc"], reverse=True
     )
 
+    # Print the top 5 hyperparameter sets by ROC-AUC
     logger.info("Top 5 Hyperparameter Sets by ROC-AUC:")
     for i, result in enumerate(sorted_results[:5]):
         logger.info(
             f"Rank {i+1}: ROC-AUC: {result['max_roc_auc']:.4f}, Parameters: {result['params']}"
         )
 
+    # Visualize the training history for the top 5 hyperparameter sets
     for index, result in enumerate(sorted_results, start=1):
         history = result["history"]
         params = result["params"]
