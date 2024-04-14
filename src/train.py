@@ -100,6 +100,7 @@ def train(
     }
     best_roc_auc = 0
     best_epoch = 0
+    last_epoch = 0
     patience_counter = 0
 
     for epoch in range(1, num_epochs + 1):
@@ -118,6 +119,8 @@ def train(
             f"Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Train Accuracy: {train_acc:.2f}%, Val Loss: {val_loss:.4f}, Val Accuracy: {val_acc:.2f}%, ROC-AUC: {roc_auc:.4f}"
         )
 
+        last_epoch = epoch
+
         if roc_auc > best_roc_auc:
             best_roc_auc = roc_auc
             best_epoch = epoch
@@ -129,7 +132,10 @@ def train(
                 logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
 
-    logger.info(f"Best ROC-AUC: {best_roc_auc:.4f} at epoch {best_epoch}")
     history["max_roc_auc"] = best_roc_auc
+    last_roc_auc = history["roc_auc"][-1]
+
+    logger.info(f"Best ROC-AUC: {best_roc_auc:.4f} at epoch {best_epoch}")
+    logger.info(f"Final ROC-AUC: {last_roc_auc:.4f} at epoch {last_epoch}")
 
     return history

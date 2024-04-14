@@ -52,7 +52,7 @@ def set_seed(seed=42):
     torch.cuda.manual_seed(seed)  # PyTorch's CUDA seed
     torch.cuda.manual_seed_all(seed)  # If using multi-GPU, for all CUDA devices
 
-    # Additional configurations for further ensuring reproducibility:
+    # Additional configurations for ensuring reproducibility:
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -73,23 +73,50 @@ else:
     logging.info("CUDA is not available, using CPU instead")
 
 
-def training():
+def training(model_type="gcn"):
     logger.info("Starting training")
 
     train_loader, val_loader, _ = load_data(batch_size=32)
-    model = GCN(
-        in_channels=train_loader.dataset.num_features,
-        out_channels=train_loader.dataset.num_tasks,
-        hidden_channels=32,
-        num_layers=5,
-        dropout=0.5,
-    )
+
+    if model_type == "gcn":
+        model = GCN(
+            in_channels=train_loader.dataset.num_features,
+            out_channels=train_loader.dataset.num_tasks,
+            hidden_channels=256,
+            num_layers=5,
+            dropout=0.2,
+        )
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    elif model_type == "gsage":
+        model = GraphSAGE(
+            in_channels=train_loader.dataset.num_features,
+            out_channels=train_loader.dataset.num_tasks,
+            hidden_channels=256,
+            num_layers=5,
+            dropout=0.2,
+        )
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    elif model_type == "gat":
+        model = GAT(
+            in_channels=train_loader.dataset.num_features,
+            out_channels=train_loader.dataset.num_tasks,
+            hidden_channels=64,
+            num_layers=5,
+            dropout=0.2,
+            heads=8,
+            concat=False,
+        )
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    else:
+        logger.error(
+            "Invalid model type. Please choose either 'gcn', 'gat', or 'gsage'."
+        )
+        raise ValueError("Invalid model type specified.")
+
     logger.info(f"Model initialized: {model}")
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     criterion = torch.nn.BCEWithLogitsLoss()
 
-    # Train the model
     history = train(
         model=model,
         train_loader=train_loader,
@@ -97,7 +124,7 @@ def training():
         optimizer=optimizer,
         criterion=criterion,
         num_epochs=300,
-        patience=25,
+        patience=None,
     )
 
     visualize_history(history, "loss", f"Training and Validation", f"history_loss.png")
@@ -107,41 +134,55 @@ def training():
     logger.info("Training completed")
 
 
-def hyperparameter_tuning():
+def hyperparameter_tuning(model_type="gcn"):
     logger.info("Starting hyperparameter tuning")
 
-    model_class = GAT
+    if model_type == "gcn":
+        model_class = GCN
+    elif model_type == "gat":
+        model_class = GAT
+    elif model_type == "gsage":
+        model_class = GraphSAGE
+    else:
+        logger.error(
+            "Invalid model type. Please choose either 'gcn', 'gat', or 'gsage'."
+        )
+        raise ValueError("Invalid model type specified.")
 
     train_loader, val_loader, _ = load_data(batch_size=32)
-    param_options = {
-        "hidden_channels": [64, 256],
-        "num_layers": [3, 5],
-        "dropout": [0.2, 0.5],
-        "lr": [0.001, 0.0001],
-    }
 
     if model_class == GAT:
-        param_options["heads"] = [2, 6]
-        param_options["concat"] = [True, False]
+        param_options = {
+            "hidden_channels": [64, 256],
+            "num_layers": [3, 5],
+            "dropout": [0.2],
+            "lr": [0.001, 0.0001],
+            "heads": [2, 4, 8],
+            "concat": [True, False],
+        }
+    else:
+        param_options = {
+            "hidden_channels": [64, 256],
+            "num_layers": [3, 5],
+            "dropout": [0.2, 0.5],
+            "lr": [0.001, 0.0001],
+        }
 
     param_grid = generate_param_grid(param_options)
     _, _, results = grid_search(
         model_class, train_loader, val_loader, param_grid, num_epochs=100, patience=15
     )
 
-    # Sort results by max ROC-AUC
     sorted_results = sorted(
         results, key=lambda result: result["max_roc_auc"], reverse=True
     )
 
-    # Print top 5 parameter sets
     logger.info("Top 5 Hyperparameter Sets by ROC-AUC:")
     for i, result in enumerate(sorted_results[:5]):
         logger.info(
             f"Rank {i+1}: ROC-AUC: {result['max_roc_auc']:.4f}, Parameters: {result['params']}"
         )
 
-    # Visualize histories for all parameter sets
     for index, result in enumerate(sorted_results, start=1):
         history = result["history"]
         params = result["params"]
@@ -172,8 +213,14 @@ if __name__ == "__main__":
         required=True,
         help="Specify the mode to run: 'train' or 'tune'.",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["gcn", "gat", "gsage"],
+        required=True,
+        help="Specify the model type to use: 'gcn', 'gat', or 'gsage'.",
+    )
 
-    # Parse the arguments
     args = parser.parse_args()
 
     if args.mode == "train":
