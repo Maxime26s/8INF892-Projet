@@ -39,8 +39,3 @@ def load_data(
     logger.debug("Datasets prepared and loaders initialized")
 
     return train_loader, val_loader, test_loader
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    train_loader, val_loader, test_loader = load_data()
