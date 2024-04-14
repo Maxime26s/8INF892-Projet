@@ -22,9 +22,6 @@ def load_data(
     print(dataset.num_tasks)
     dataset = dataset.shuffle()
 
-    # Print information about the dataset
-    print_info(dataset, "Original")
-
     # Split the dataset into training, validation, and test sets
     num_graphs = len(dataset)
     train_size = int(num_graphs * train_prop)
@@ -34,11 +31,6 @@ def load_data(
     val_dataset = dataset[train_size : train_size + val_size]
     test_dataset = dataset[train_size + val_size :]
 
-    # Print information about the splits
-    print_info(train_dataset, "Train")
-    print_info(val_dataset, "Validation")
-    print_info(test_dataset, "Test")
-
     # Initialize the DataLoaders for each set
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
@@ -47,18 +39,6 @@ def load_data(
     logger.debug("Datasets prepared and loaders initialized")
 
     return train_loader, val_loader, test_loader
-
-
-def print_info(dataset, name):
-    return
-    logger.info(f"{name} - Dataset type: {type(dataset)}")
-    logger.info(f"{name} - Number of graphs: {len(dataset)}")
-    logger.info(f"{name} - Number of features: {dataset.num_features}")
-    logger.info(f"{name} - Number of classes: {dataset.num_classes}")
-    logger.info(f"{name} - Number of nodes: {sum(data.num_nodes for data in dataset)}")
-    logger.info(f"{name} - Number of features per node: {dataset.num_node_features}")
-    logger.info(f"{name} - Number of edges: {sum(data.num_edges for data in dataset)}")
-    logger.info(f"{name} - Number of features per edge: {dataset.num_edge_features}")
 
 
 if __name__ == "__main__":

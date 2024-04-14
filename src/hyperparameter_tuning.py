@@ -62,14 +62,11 @@ def grid_search(
 def generate_param_grid(param_options):
     logger.info("Generating parameter grid")
 
-    # Extract parameter names and their corresponding lists of possible values
     param_names = param_options.keys()
     param_values = param_options.values()
 
     # Generate all combinations of hyperparameter values
     all_combinations = list(itertools.product(*param_values))
-
-    # Convert each combination to a dictionary
     param_grid = [
         dict(zip(param_names, combination)) for combination in all_combinations
     ]

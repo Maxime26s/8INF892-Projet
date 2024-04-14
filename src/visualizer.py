@@ -34,7 +34,7 @@ def visualize_history(history, metric, title="Training and Validation", filename
 
 
 def to_numpy(data):
-    if torch.is_tensor(data[0]):  # Check if the first element is a tensor
-        return np.array([d.cpu().numpy() for d in data])  # Convert each tensor to numpy
+    if torch.is_tensor(data[0]):
+        return np.array([d.cpu().numpy() for d in data])
     else:
-        return np.array(data)  # If it's already a numpy array or a list, use it as is
+        return np.array(data)
